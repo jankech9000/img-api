@@ -28,7 +28,7 @@ function validateMetadata(meta) {
 
 // --- HEALTH CHECK (Cloud Run needs this) ---
 app.get("/", (req, res) => {
-    res.send("IMG API running 🚀");
+    res.send("IMG API running use it to test");
 });
 
 // --- UPLOAD ENDPOINT ---

@@ -7,7 +7,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const storage = new Storage();
 
-// 🔥 tvoj bucket v GCP
+// 🔥 tvoj bucket
 const bucket = storage.bucket("static-assets-demo");
 
 // --- METADATA VALIDÁCIA ---
@@ -26,9 +26,9 @@ function validateMetadata(meta) {
     return null;
 }
 
-// --- HEALTH CHECK (Cloud Run needs this) ---
+// --- HEALTH CHECK ---
 app.get("/", (req, res) => {
-    res.send("IMG API running use it to test");
+    res.send("IMG API running 🚀");
 });
 
 // --- UPLOAD ENDPOINT ---
@@ -38,6 +38,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
             return res.status(400).send("No file uploaded");
         }
 
+        // parse metadata
         let metadata = {};
         try {
             metadata = JSON.parse(req.body.metadata || "{}");
@@ -45,14 +46,20 @@ app.post("/upload", upload.single("file"), async (req, res) => {
             return res.status(400).send("Invalid metadata JSON");
         }
 
-        // VALIDATION
+        // validate
         const error = validateMetadata(metadata);
         if (error) {
             return res.status(400).send(error);
         }
 
-        // filename
-        const filename = Date.now() + "-" + req.file.originalname;
+        // 🟢 DYNAMIC FOLDER LOGIC (tvoje požadované riešenie)
+        const baseFolder = metadata.folder || "default";
+
+        const filename =
+            baseFolder + "/" +
+            metadata.type + "/" +
+            Date.now() + "-" +
+            req.file.originalname;
 
         const file = bucket.file(filename);
 
@@ -60,7 +67,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
             metadata: {
                 metadata: {
                     owner: metadata.owner,
-                    type: metadata.type
+                    type: metadata.type,
+                    folder: baseFolder
                 }
             }
         });
@@ -75,6 +83,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
                 message: "Upload successful",
                 file: filename,
                 bucket: "static-assets-demo",
+                publicPath: `https://storage.googleapis.com/static-assets-demo/${filename}`,
                 metadata: metadata
             });
         });
@@ -87,7 +96,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 });
 
-// --- CLOUD RUN PORT1 ---
+// --- CLOUD RUN PORT ---
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, "0.0.0.0", () => {
